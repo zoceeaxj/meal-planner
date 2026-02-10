@@ -14,6 +14,47 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        .grocery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hide-checked-toggle {
+  font-size: 13px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.checked-section {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.checked-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #333;
+  list-style: none;
+}
+
+.checked-section summary::-webkit-details-marker {
+  display: none;
+}
+
+#checkedGroceryList .grocery-item {
+  margin-top: 8px;
+}
+
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
@@ -672,10 +713,23 @@
                 </div>
             </div>
 
-            <div class="grocery-section">
-                <h2>📝 Grocery List</h2>
-                <div id="groceryList"></div>
-            </div>
+        <div class="grocery-section">
+    <div class="grocery-header">
+        <h2>📝 Grocery List</h2>
+        <label class="hide-checked-toggle">
+            <input type="checkbox" id="hideCheckedToggle" onchange="renderGroceryList()">
+            Hide checked
+        </label>
+    </div>
+
+    <div id="groceryList"></div>
+
+    <details class="checked-section" id="checkedSection">
+        <summary id="checkedSummary">Checked items (0)</summary>
+        <div id="checkedGroceryList"></div>
+    </details>
+</div>
+
         </div>
     </div>
 
@@ -1165,60 +1219,98 @@
         }
 
         // Render grocery list
-        function renderGroceryList() {
-            const groceryContainer = document.getElementById('groceryList');
-            groceryContainer.innerHTML = '';
+ function renderGroceryList() {
+  const groceryContainer = document.getElementById('groceryList');
+  const checkedContainer = document.getElementById('checkedGroceryList');
+  const checkedSection = document.getElementById('checkedSection');
+  const checkedSummary = document.getElementById('checkedSummary');
+  const hideChecked = document.getElementById('hideCheckedToggle')?.checked;
 
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-            const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+  groceryContainer.innerHTML = '';
+  checkedContainer.innerHTML = '';
 
-            const groceryMap = new Map();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
-            meals.forEach(meal => {
-                const mealOverlapsMonth = !(meal.endDate < monthStart || meal.startDate > monthEnd);
-                
-                if (mealOverlapsMonth && meal.groceries && meal.groceries.length > 0) {
-                    meal.groceries.forEach(grocery => {
-                        const key = `${meal.id}-${grocery.item}`;
-                        groceryMap.set(key, {
-                            item: grocery.item,
-                            quantity: grocery.quantity,
-                            color: meal.color,
-                            mealName: meal.name,
-                            key: key
-                        });
-                    });
-                }
-            });
+  const groceryMap = new Map();
 
-            if (groceryMap.size === 0) {
-                groceryContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No grocery items yet</p>';
-                return;
-            }
+  meals.forEach(meal => {
+    const mealOverlapsMonth = !(meal.endDate < monthStart || meal.startDate > monthEnd);
 
-            groceryMap.forEach((grocery, key) => {
-                const groceryDiv = document.createElement('div');
-                groceryDiv.className = 'grocery-item' + (checkedGroceries.has(key) ? ' checked' : '');
-                groceryDiv.style.background = grocery.color;
-                
-                const isChecked = checkedGroceries.has(key);
-                
-                groceryDiv.innerHTML = `
-                    <div class="grocery-content">
-                        <input type="checkbox" class="grocery-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroceryCheck('${key}')">
-                        <div class="grocery-item-name">
-                            <div style="font-size: 13px; font-weight: 600;">${grocery.item}</div>
-                            <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${grocery.mealName}</div>
-                        </div>
-                    </div>
-                    ${grocery.quantity ? `<div class="grocery-item-quantity">${grocery.quantity}</div>` : ''}
-                `;
-                
-                groceryContainer.appendChild(groceryDiv);
-            });
-        }
+    if (mealOverlapsMonth && meal.groceries && meal.groceries.length > 0) {
+      meal.groceries.forEach(grocery => {
+        const key = `${meal.id}-${grocery.item}`;
+        groceryMap.set(key, {
+          item: grocery.item,
+          quantity: grocery.quantity,
+          color: meal.color,
+          mealName: meal.name,
+          key: key
+        });
+      });
+    }
+  });
+
+  if (groceryMap.size === 0) {
+    groceryContainer.innerHTML =
+      '<p style="color: #999; text-align: center; padding: 20px;">No grocery items yet</p>';
+    checkedSection.style.display = 'none';
+    return;
+  }
+
+  let checkedCount = 0;
+  let uncheckedCount = 0;
+
+  function makeGroceryDiv(grocery, isChecked) {
+    const groceryDiv = document.createElement('div');
+    groceryDiv.className = 'grocery-item' + (isChecked ? ' checked' : '');
+    groceryDiv.style.background = grocery.color;
+
+    groceryDiv.innerHTML = `
+      <div class="grocery-content">
+        <input type="checkbox" class="grocery-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroceryCheck('${grocery.key}')">
+        <div class="grocery-item-name">
+          <div style="font-size: 13px; font-weight: 600;">${grocery.item}</div>
+          <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${grocery.mealName}</div>
+        </div>
+      </div>
+      ${grocery.quantity ? `<div class="grocery-item-quantity">${grocery.quantity}</div>` : ''}
+    `;
+    return groceryDiv;
+  }
+
+  // Unchecked first (main list)
+  groceryMap.forEach(grocery => {
+    const isChecked = checkedGroceries.has(grocery.key);
+    if (!isChecked) {
+      uncheckedCount++;
+      groceryContainer.appendChild(makeGroceryDiv(grocery, false));
+    }
+  });
+
+  // Checked (dropdown)
+  groceryMap.forEach(grocery => {
+    const isChecked = checkedGroceries.has(grocery.key);
+    if (isChecked) {
+      checkedCount++;
+      checkedContainer.appendChild(makeGroceryDiv(grocery, true));
+    }
+  });
+
+  checkedSummary.textContent = `Checked items (${checkedCount})`;
+  checkedSection.style.display = checkedCount > 0 ? 'block' : 'none';
+
+  if (uncheckedCount === 0 && checkedCount > 0) {
+    groceryContainer.innerHTML =
+      '<p style="color: #999; text-align: center; padding: 12px;">All items are checked.</p>';
+  }
+
+  // If user checks "Hide checked", checked items stay only in dropdown anyway.
+  // (This toggle is still useful if later you decide to show checked items in main list too.)
+}
+
 
         // Toggle grocery item checked state
         async function toggleGroceryCheck(key) {
