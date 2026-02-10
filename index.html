@@ -818,61 +818,77 @@
         }
 
         // Save meals to Google Sheets
-        async function saveMealsToSheets() {
-            try {
-                updateSyncStatus('syncing', 'Saving...');
+       async function saveMealsToSheets() {
+  try {
+    updateSyncStatus('syncing', 'Saving...');
 
-                // IMPORTANT:
-                // Google Sheets API v4 requires OAuth for writes. An API key alone cannot reliably write to a private sheet.
-                // If you want cloud writes, deploy a small Google Apps Script web app and paste its URL into SCRIPT_URL.
-                if (!SCRIPT_URL) {
-                    throw new Error('Missing SCRIPT_URL (Apps Script web app) for saving to Google Sheets');
-                }
+    if (!SCRIPT_URL) {
+      throw new Error('Missing SCRIPT_URL (Apps Script web app) for saving to Google Sheets');
+    }
 
-                const res = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'saveMeals', meals })
-                });
+    // Use form-encoded POST to avoid CORS preflight
+    const body = new URLSearchParams();
+    body.set('action', 'saveMeals');
+    body.set('meals', JSON.stringify(meals));
 
-                const out = await res.json().catch(() => ({}));
-                if (!res.ok || out.ok === false) {
-                    throw new Error(out.error || 'Apps Script save failed');
-                }
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    });
 
-                // Also save to local storage as backup
-                saveMealsToLocalStorage();
-                updateSyncStatus('synced', '✓ Saved to Google Sheets');
-            } catch (error) {
-                console.error('Error saving to Sheets:', error);
-                updateSyncStatus('error', '✗ Not saved to Google Sheets. Saved locally. (Set SCRIPT_URL to enable cloud saving.)');
-                saveMealsToLocalStorage();
-            }
-        }
+    // Apps Script sometimes returns text/html. Try JSON, else treat as text.
+    const text = await res.text();
+    let out = {};
+    try { out = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok || out.ok === false) {
+      throw new Error(out.error || text || 'Apps Script save failed');
+    }
+
+    saveMealsToLocalStorage();
+    updateSyncStatus('synced', '✓ Saved to Google Sheets');
+  } catch (error) {
+    console.error('Error saving to Sheets:', error);
+    updateSyncStatus('error', '✗ Not saved to Google Sheets. Saved locally.');
+    saveMealsToLocalStorage();
+  }
+}
+
 
         // Save checked groceries to Google Sheets
-        async function saveCheckedGroceriesToSheets() {
-            try {
-                if (!SCRIPT_URL) {
-                    // still persist locally
-                    saveCheckedGroceriesToLocalStorage();
-                    return;
-                }
-                const res = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'saveCheckedGroceries', checked: Array.from(checkedGroceries) })
-                });
-                const out = await res.json().catch(() => ({}));
-                if (!res.ok || out.ok === false) {
-                    throw new Error(out.error || 'Apps Script save failed');
-                }
-                saveCheckedGroceriesToLocalStorage();
-            } catch (error) {
-                console.error('Error saving checked groceries:', error);
-                saveCheckedGroceriesToLocalStorage();
-            }
-        }
+       async function saveCheckedGroceriesToSheets() {
+  try {
+    if (!SCRIPT_URL) {
+      saveCheckedGroceriesToLocalStorage();
+      return;
+    }
+
+    const body = new URLSearchParams();
+    body.set('action', 'saveCheckedGroceries');
+    body.set('checked', JSON.stringify(Array.from(checkedGroceries)));
+
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    });
+
+    const text = await res.text();
+    let out = {};
+    try { out = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok || out.ok === false) {
+      throw new Error(out.error || text || 'Apps Script save failed');
+    }
+
+    saveCheckedGroceriesToLocalStorage();
+  } catch (error) {
+    console.error('Error saving checked groceries:', error);
+    saveCheckedGroceriesToLocalStorage();
+  }
+}
+
 
         // Local storage fallback functions
         function saveMealsToLocalStorage() {
