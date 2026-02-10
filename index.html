@@ -285,12 +285,17 @@
             touch-action: manipulation;
         }
 
-        @media (min-width: 768px) {
-            .meal-item {
-                font-size: 11px;
-                padding: 4px 6px;
-            }
-        }
+     @media (max-width: 420px) {
+    .meal-item {
+        white-space: normal;        /* allow wrapping */
+        overflow: visible;          /* let text expand */
+        text-overflow: unset;
+        line-height: 1.2;
+        padding: 4px 6px;
+        word-break: break-word;     /* prevent overflow on long words */
+    }
+}
+
 
         .meal-item:active {
             opacity: 0.8;
