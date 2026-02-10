@@ -190,12 +190,25 @@
             overflow: hidden;
         }
 
-        .calendar-header {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            background: #4CAF50;
-            color: white;
-        }
+        .calendar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.calendar-day,
+.calendar-header > div {
+    min-width: 0;
+}
+
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(60px, 1fr));
+    width: max(100%, 420px);
+    background: #4CAF50;
+    color: white;
+}
+
 
         .calendar-header div {
             padding: 10px 5px;
@@ -211,10 +224,12 @@
             }
         }
 
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-        }
+   .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(60px, 1fr));
+    width: max(100%, 420px);
+}
+
 
         .calendar-day {
             border: 1px solid #e0e0e0;
