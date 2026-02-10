@@ -1031,7 +1031,12 @@
             
             dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
             
-            const dayMeals = meals.filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate));
+            const dayMeals = meals
+  .filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate))
+  .sort((a, b) => {
+    const order = { lunch: 1, dinner: 2 };
+    return (order[a.type] ?? 99) - (order[b.type] ?? 99);
+  });
             
             dayMeals.forEach(meal => {
                 const mealDiv = document.createElement('div');
