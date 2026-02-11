@@ -14,38 +14,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        .grocery-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.checked-section {
-  margin-top: 12px;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.checked-section summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: #333;
-  list-style: none;
-}
-
-.checked-section summary::-webkit-details-marker {
-  display: none;
-}
-
-#checkedGroceryList .grocery-item {
-  margin-top: 8px;
-}
-
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
@@ -103,11 +71,9 @@
             .main-layout {
                 flex-direction: row;
             }
-            
             .container {
                 padding: 30px;
             }
-            
             h1 {
                 font-size: 32px;
                 margin-bottom: 20px;
@@ -220,27 +186,22 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             overflow: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .calendar {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
+        .calendar-day,
+        .calendar-header > div {
+            min-width: 0;
+        }
 
-.calendar-day,
-.calendar-header > div {
-    min-width: 0;
-}
-
-
-.calendar-header {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(60px, 1fr));
-    width: max(100%, 420px);
-    background: #4CAF50;
-    color: white;
-}
-
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(60px, 1fr));
+            width: max(100%, 420px);
+            background: #4CAF50;
+            color: white;
+        }
 
         .calendar-header div {
             padding: 10px 5px;
@@ -256,12 +217,11 @@
             }
         }
 
-   .calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(60px, 1fr));
-    width: max(100%, 420px);
-}
-
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(60px, 1fr));
+            width: max(100%, 420px);
+        }
 
         .calendar-day {
             border: 1px solid #e0e0e0;
@@ -317,17 +277,16 @@
             touch-action: manipulation;
         }
 
-     @media (max-width: 420px) {
-    .meal-item {
-        white-space: normal;        /* allow wrapping */
-        overflow: visible;          /* let text expand */
-        text-overflow: unset;
-        line-height: 1.2;
-        padding: 4px 6px;
-        word-break: break-word;     /* prevent overflow on long words */
-    }
-}
-
+        @media (max-width: 420px) {
+            .meal-item {
+                white-space: normal;
+                overflow: visible;
+                text-overflow: unset;
+                line-height: 1.2;
+                padding: 4px 6px;
+                word-break: break-word;
+            }
+        }
 
         .meal-item:active {
             opacity: 0.8;
@@ -339,6 +298,48 @@
 
         .meal-dinner::before {
             content: "🌙 ";
+        }
+
+        /* NEW: ready-to-cook status line under each meal pill */
+        .meal-status-line {
+            height: 3px;
+            border-radius: 999px;
+            margin: 2px 0 6px 0; /* space between meals */
+            background: #2ecc71; /* green default */
+        }
+        .meal-status-line.red {
+            background: #e74c3c; /* red when shopping required */
+        }
+
+        .grocery-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .checked-section {
+            margin-top: 12px;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .checked-section summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #333;
+            list-style: none;
+        }
+
+        .checked-section summary::-webkit-details-marker {
+            display: none;
+        }
+
+        #checkedGroceryList .grocery-item {
+            margin-top: 8px;
         }
 
         .grocery-section h2 {
@@ -512,7 +513,6 @@
             margin-bottom: 10px;
         }
 
-        
         @media (max-width: 420px) {
             .grocery-input-row {
                 grid-template-columns: 1fr 1fr;
@@ -535,7 +535,8 @@
                 min-width: 420px;
             }
         }
-.grocery-input-row input {
+
+        .grocery-input-row input {
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -674,11 +675,11 @@
 
     <div class="container">
         <h1>🍽️ Monthly Meal Planner</h1>
-        
+
         <div class="sync-status" id="syncStatus">
             <span id="syncStatusText">Connecting to Google Sheets...</span>
         </div>
-        
+
         <div class="main-layout">
             <div class="calendar-section">
                 <div class="controls">
@@ -692,32 +693,24 @@
 
                 <div class="calendar">
                     <div class="calendar-header">
-                        <div>Sun</div>
-                        <div>Mon</div>
-                        <div>Tue</div>
-                        <div>Wed</div>
-                        <div>Thu</div>
-                        <div>Fri</div>
-                        <div>Sat</div>
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                     </div>
                     <div class="calendar-grid" id="calendarGrid"></div>
                 </div>
             </div>
 
-        <div class="grocery-section">
-<div class="grocery-header">
-    <h2>📝 Grocery List</h2>
-</div>
+            <div class="grocery-section">
+                <div class="grocery-header">
+                    <h2>📝 Grocery List</h2>
+                </div>
 
+                <div id="groceryList"></div>
 
-    <div id="groceryList"></div>
-
-    <details class="checked-section" id="checkedSection">
-        <summary id="checkedSummary">Checked items (0)</summary>
-        <div id="checkedGroceryList"></div>
-    </details>
-</div>
-
+                <details class="checked-section" id="checkedSection">
+                    <summary id="checkedSummary">Checked items (0)</summary>
+                    <div id="checkedGroceryList"></div>
+                </details>
+            </div>
         </div>
     </div>
 
@@ -788,7 +781,7 @@
         const SHEET_ID = '1dXKOjcq99gZ51qrprHgjH5DAS2wt99bYcA0XWySKjRw';
         const API_KEY = 'AIzaSyCe4wU0KYBY04Le9MAC4BaAuU1c-zy9dac';
         const MEALS_RANGE = 'Meals!A:H';
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8xy5VlkGcnyvedn6CaZbOKoB9wVTh-dpgL1C0m1tD3_psp44LAzwAF_ASW_Wm0v2/exec'; // Optional: paste your Google Apps Script Web App URL to enable writing to Sheets
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8xy5VlkGcnyvedn6CaZbOKoB9wVTh-dpgL1C0m1tD3_psp44LAzwAF_ASW_Wm0v2/exec';
         const CHECKED_RANGE = 'CheckedGroceries!A:A';
 
         let currentDate = new Date();
@@ -807,23 +800,19 @@
             return pickFrom[Math.floor(Math.random() * pickFrom.length)];
         }
 
-        // Update sync status
+        // Sync status
         function updateSyncStatus(status, message) {
             const statusEl = document.getElementById('syncStatus');
             const textEl = document.getElementById('syncStatusText');
-            
             statusEl.className = 'sync-status ' + status;
             textEl.textContent = message;
         }
 
-        // Show/hide loading overlay
+        // Loading overlay
         function showLoading(show) {
             const overlay = document.getElementById('loadingOverlay');
-            if (show) {
-                overlay.classList.add('show');
-            } else {
-                overlay.classList.remove('show');
-            }
+            if (show) overlay.classList.add('show');
+            else overlay.classList.remove('show');
         }
 
         // Load meals from Google Sheets
@@ -831,11 +820,11 @@
             try {
                 showLoading(true);
                 updateSyncStatus('syncing', 'Loading meals from Google Sheets...');
-                
+
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${MEALS_RANGE}?key=${API_KEY}`;
                 const response = await fetch(url);
                 const data = await response.json();
-                
+
                 if (data.values && data.values.length > 1) {
                     meals = data.values.slice(1).map(row => ({
                         id: parseInt(row[0]) || Date.now(),
@@ -850,7 +839,7 @@
                 } else {
                     meals = [];
                 }
-                
+
                 updateSyncStatus('synced', '✓ Synced with Google Sheets');
                 showLoading(false);
             } catch (error) {
@@ -867,7 +856,7 @@
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${CHECKED_RANGE}?key=${API_KEY}`;
                 const response = await fetch(url);
                 const data = await response.json();
-                
+
                 if (data.values && data.values.length > 0) {
                     checkedGroceries = new Set(data.values.flat());
                 } else {
@@ -880,88 +869,82 @@
         }
 
         // Save meals to Google Sheets
-       async function saveMealsToSheets() {
-  try {
-    updateSyncStatus('syncing', 'Saving...');
+        async function saveMealsToSheets() {
+            try {
+                updateSyncStatus('syncing', 'Saving...');
 
-    if (!SCRIPT_URL) {
-      throw new Error('Missing SCRIPT_URL (Apps Script web app) for saving to Google Sheets');
-    }
+                if (!SCRIPT_URL) {
+                    throw new Error('Missing SCRIPT_URL (Apps Script web app) for saving to Google Sheets');
+                }
 
-    // Use form-encoded POST to avoid CORS preflight
-    const body = new URLSearchParams();
-    body.set('action', 'saveMeals');
-    body.set('meals', JSON.stringify(meals));
+                const body = new URLSearchParams();
+                body.set('action', 'saveMeals');
+                body.set('meals', JSON.stringify(meals));
 
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: body.toString()
-    });
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: body.toString()
+                });
 
-    // Apps Script sometimes returns text/html. Try JSON, else treat as text.
-    const text = await res.text();
-    let out = {};
-    try { out = JSON.parse(text); } catch (_) {}
+                const text = await res.text();
+                let out = {};
+                try { out = JSON.parse(text); } catch (_) {}
 
-    if (!res.ok || out.ok === false) {
-      throw new Error(out.error || text || 'Apps Script save failed');
-    }
+                if (!res.ok || out.ok === false) {
+                    throw new Error(out.error || text || 'Apps Script save failed');
+                }
 
-    saveMealsToLocalStorage();
-    updateSyncStatus('synced', '✓ Saved to Google Sheets');
-  } catch (error) {
-    console.error('Error saving to Sheets:', error);
-    updateSyncStatus('error', '✗ Not saved to Google Sheets. Saved locally.');
-    saveMealsToLocalStorage();
-  }
-}
-
+                saveMealsToLocalStorage();
+                updateSyncStatus('synced', '✓ Saved to Google Sheets');
+            } catch (error) {
+                console.error('Error saving to Sheets:', error);
+                updateSyncStatus('error', '✗ Not saved to Google Sheets. Saved locally.');
+                saveMealsToLocalStorage();
+            }
+        }
 
         // Save checked groceries to Google Sheets
-       async function saveCheckedGroceriesToSheets() {
-  try {
-    if (!SCRIPT_URL) {
-      saveCheckedGroceriesToLocalStorage();
-      return;
-    }
+        async function saveCheckedGroceriesToSheets() {
+            try {
+                if (!SCRIPT_URL) {
+                    saveCheckedGroceriesToLocalStorage();
+                    return;
+                }
 
-    const body = new URLSearchParams();
-    body.set('action', 'saveCheckedGroceries');
-    body.set('checked', JSON.stringify(Array.from(checkedGroceries)));
+                const body = new URLSearchParams();
+                body.set('action', 'saveCheckedGroceries');
+                body.set('checked', JSON.stringify(Array.from(checkedGroceries)));
 
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: body.toString()
-    });
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: body.toString()
+                });
 
-    const text = await res.text();
-    let out = {};
-    try { out = JSON.parse(text); } catch (_) {}
+                const text = await res.text();
+                let out = {};
+                try { out = JSON.parse(text); } catch (_) {}
 
-    if (!res.ok || out.ok === false) {
-      throw new Error(out.error || text || 'Apps Script save failed');
-    }
+                if (!res.ok || out.ok === false) {
+                    throw new Error(out.error || text || 'Apps Script save failed');
+                }
 
-    saveCheckedGroceriesToLocalStorage();
-  } catch (error) {
-    console.error('Error saving checked groceries:', error);
-    saveCheckedGroceriesToLocalStorage();
-  }
-}
+                saveCheckedGroceriesToLocalStorage();
+            } catch (error) {
+                console.error('Error saving checked groceries:', error);
+                saveCheckedGroceriesToLocalStorage();
+            }
+        }
 
-
-        // Local storage fallback functions
+        // Local storage fallback
         function saveMealsToLocalStorage() {
             localStorage.setItem('mealPlanner', JSON.stringify(meals));
         }
 
         function loadMealsFromLocalStorage() {
             const stored = localStorage.getItem('mealPlanner');
-            if (stored) {
-                meals = JSON.parse(stored);
-            }
+            if (stored) meals = JSON.parse(stored);
         }
 
         function saveCheckedGroceriesToLocalStorage() {
@@ -970,12 +953,19 @@
 
         function loadCheckedGroceriesFromLocalStorage() {
             const stored = localStorage.getItem('checkedGroceries');
-            if (stored) {
-                checkedGroceries = new Set(JSON.parse(stored));
-            }
+            if (stored) checkedGroceries = new Set(JSON.parse(stored));
         }
 
-        // Initialize calendar
+        // NEW: Determine if a meal is ready-to-cook (green) or still needs shopping (red)
+        function isMealReadyToCook(meal) {
+            const items = meal?.groceries || [];
+            if (items.length === 0) return true; // no groceries means ready (green)
+
+            // keys are stored as `${meal.id}-${grocery.item}`
+            return items.every(g => checkedGroceries.has(`${meal.id}-${g.item}`));
+        }
+
+        // Initialize
         function initCalendar() {
             renderCalendar();
             renderGroceryList();
@@ -985,8 +975,8 @@
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
-            
-            document.getElementById('currentMonth').textContent = 
+
+            document.getElementById('currentMonth').textContent =
                 new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
             const firstDay = new Date(year, month, 1).getDay();
@@ -995,20 +985,17 @@
             const calendarGrid = document.getElementById('calendarGrid');
             calendarGrid.innerHTML = '';
 
-            // Empty cells for days before the month starts
             for (let i = 0; i < firstDay; i++) {
                 const emptyDiv = document.createElement('div');
                 emptyDiv.className = 'calendar-day other-month';
                 calendarGrid.appendChild(emptyDiv);
             }
 
-            // Current month days
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayDiv = createDayCell(day, false, year, month);
                 calendarGrid.appendChild(dayDiv);
             }
 
-            // Empty cells to complete the grid
             const totalCells = calendarGrid.children.length;
             const remainingCells = Math.ceil(totalCells / 7) * 7 - totalCells;
             for (let i = 0; i < remainingCells; i++) {
@@ -1022,22 +1009,19 @@
         function createDayCell(day, isOtherMonth, year, month) {
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day' + (isOtherMonth ? ' other-month' : '');
-            
-            if (isOtherMonth) {
-                return dayDiv;
-            }
-            
+
+            if (isOtherMonth) return dayDiv;
+
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            
             dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
-            
+
             const dayMeals = meals
-  .filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate))
-  .sort((a, b) => {
-    const order = { lunch: 1, dinner: 2 };
-    return (order[a.type] ?? 99) - (order[b.type] ?? 99);
-  });
-            
+                .filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate))
+                .sort((a, b) => {
+                    const order = { lunch: 1, dinner: 2 };
+                    return (order[a.type] ?? 99) - (order[b.type] ?? 99);
+                });
+
             dayMeals.forEach(meal => {
                 const mealDiv = document.createElement('div');
                 mealDiv.className = `meal-item meal-${meal.type}`;
@@ -1048,14 +1032,18 @@
                     editMeal(meal.id);
                 };
                 dayDiv.appendChild(mealDiv);
+
+                // NEW: status line under the meal pill
+                const ready = isMealReadyToCook(meal);
+                const line = document.createElement('div');
+                line.className = 'meal-status-line' + (ready ? '' : ' red');
+                dayDiv.appendChild(line);
             });
 
             dayDiv.onclick = () => openAddMealModal(dateStr);
-            
             return dayDiv;
         }
 
-        // Check if date is in range
         function isDateInRange(date, startDate, endDate) {
             return date >= startDate && date <= endDate;
         }
@@ -1065,12 +1053,12 @@
             document.getElementById('mealModal').style.display = 'block';
             document.getElementById('modalTitle').textContent = 'Add Meal';
             document.getElementById('deleteMealBtn').style.display = 'none';
-            
+
             document.getElementById('mealName').value = '';
             document.getElementById('mealType').value = 'lunch';
             document.getElementById('servings').value = '4';
             document.getElementById('mealColor').value = getNextAvailableColor();
-            
+
             if (date) {
                 document.getElementById('startDate').value = date;
                 document.getElementById('endDate').value = date;
@@ -1081,10 +1069,10 @@
                 document.getElementById('endDate').value = today;
                 selectedDate = null;
             }
-            
+
             document.getElementById('groceryInputs').innerHTML = '';
             addGroceryInput();
-            
+
             editingMealId = null;
         }
 
@@ -1096,23 +1084,21 @@
             document.getElementById('mealModal').style.display = 'block';
             document.getElementById('modalTitle').textContent = 'Edit Meal';
             document.getElementById('deleteMealBtn').style.display = 'block';
-            
+
             document.getElementById('mealName').value = meal.name;
             document.getElementById('mealType').value = meal.type;
             document.getElementById('startDate').value = meal.startDate;
             document.getElementById('endDate').value = meal.endDate;
             document.getElementById('servings').value = meal.servings;
             document.getElementById('mealColor').value = meal.color;
-            
+
             document.getElementById('groceryInputs').innerHTML = '';
             if (meal.groceries && meal.groceries.length > 0) {
-                meal.groceries.forEach(grocery => {
-                    addGroceryInput(grocery.item, grocery.quantity);
-                });
+                meal.groceries.forEach(grocery => addGroceryInput(grocery.item, grocery.quantity));
             } else {
                 addGroceryInput();
             }
-            
+
             editingMealId = mealId;
         }
 
@@ -1121,22 +1107,20 @@
             const container = document.getElementById('groceryInputs');
             const row = document.createElement('div');
             row.className = 'grocery-input-row';
-            
+
             row.innerHTML = `
                 <input type="text" placeholder="Grocery item" value="${itemValue}">
                 <input type="text" placeholder="Quantity" value="${quantityValue}">
                 <button class="remove-grocery-btn" onclick="removeGroceryInput(this)">✕</button>
             `;
-            
+
             container.appendChild(row);
         }
 
         // Remove grocery input row
         function removeGroceryInput(btn) {
             const container = document.getElementById('groceryInputs');
-            if (container.children.length > 1) {
-                btn.parentElement.remove();
-            }
+            if (container.children.length > 1) btn.parentElement.remove();
         }
 
         // Save meal
@@ -1164,9 +1148,7 @@
                 const inputs = row.querySelectorAll('input');
                 const item = inputs[0].value.trim();
                 const quantity = inputs[1].value.trim();
-                if (item) {
-                    groceries.push({ item, quantity });
-                }
+                if (item) groceries.push({ item, quantity });
             });
 
             const meal = {
@@ -1204,7 +1186,6 @@
             }
         }
 
-        // Close modal
         function closeModal() {
             document.getElementById('mealModal').style.display = 'none';
             editingMealId = null;
@@ -1212,108 +1193,102 @@
         }
 
         // Render grocery list
- function renderGroceryList() {
-  const groceryContainer = document.getElementById('groceryList');
-  const checkedContainer = document.getElementById('checkedGroceryList');
-  const checkedSection = document.getElementById('checkedSection');
-  const checkedSummary = document.getElementById('checkedSummary');
-  const hideChecked = document.getElementById('hideCheckedToggle')?.checked;
+        function renderGroceryList() {
+            const groceryContainer = document.getElementById('groceryList');
+            const checkedContainer = document.getElementById('checkedGroceryList');
+            const checkedSection = document.getElementById('checkedSection');
+            const checkedSummary = document.getElementById('checkedSummary');
 
-  groceryContainer.innerHTML = '';
-  checkedContainer.innerHTML = '';
+            groceryContainer.innerHTML = '';
+            checkedContainer.innerHTML = '';
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+            const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
-  const groceryMap = new Map();
+            const groceryMap = new Map();
 
-  meals.forEach(meal => {
-    const mealOverlapsMonth = !(meal.endDate < monthStart || meal.startDate > monthEnd);
+            meals.forEach(meal => {
+                const mealOverlapsMonth = !(meal.endDate < monthStart || meal.startDate > monthEnd);
 
-    if (mealOverlapsMonth && meal.groceries && meal.groceries.length > 0) {
-      meal.groceries.forEach(grocery => {
-        const key = `${meal.id}-${grocery.item}`;
-        groceryMap.set(key, {
-          item: grocery.item,
-          quantity: grocery.quantity,
-          color: meal.color,
-          mealName: meal.name,
-          key: key
-        });
-      });
-    }
-  });
+                if (mealOverlapsMonth && meal.groceries && meal.groceries.length > 0) {
+                    meal.groceries.forEach(grocery => {
+                        const key = `${meal.id}-${grocery.item}`;
+                        groceryMap.set(key, {
+                            item: grocery.item,
+                            quantity: grocery.quantity,
+                            color: meal.color,
+                            mealName: meal.name,
+                            key: key
+                        });
+                    });
+                }
+            });
 
-  if (groceryMap.size === 0) {
-    groceryContainer.innerHTML =
-      '<p style="color: #999; text-align: center; padding: 20px;">No grocery items yet</p>';
-    checkedSection.style.display = 'none';
-    return;
-  }
-
-  let checkedCount = 0;
-  let uncheckedCount = 0;
-
-  function makeGroceryDiv(grocery, isChecked) {
-    const groceryDiv = document.createElement('div');
-    groceryDiv.className = 'grocery-item' + (isChecked ? ' checked' : '');
-    groceryDiv.style.background = grocery.color;
-
-    groceryDiv.innerHTML = `
-      <div class="grocery-content">
-        <input type="checkbox" class="grocery-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroceryCheck('${grocery.key}')">
-        <div class="grocery-item-name">
-          <div style="font-size: 13px; font-weight: 600;">${grocery.item}</div>
-          <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${grocery.mealName}</div>
-        </div>
-      </div>
-      ${grocery.quantity ? `<div class="grocery-item-quantity">${grocery.quantity}</div>` : ''}
-    `;
-    return groceryDiv;
-  }
-
-  // Unchecked first (main list)
-  groceryMap.forEach(grocery => {
-    const isChecked = checkedGroceries.has(grocery.key);
-    if (!isChecked) {
-      uncheckedCount++;
-      groceryContainer.appendChild(makeGroceryDiv(grocery, false));
-    }
-  });
-
-  // Checked (dropdown)
-  groceryMap.forEach(grocery => {
-    const isChecked = checkedGroceries.has(grocery.key);
-    if (isChecked) {
-      checkedCount++;
-      checkedContainer.appendChild(makeGroceryDiv(grocery, true));
-    }
-  });
-
-  checkedSummary.textContent = `Checked items (${checkedCount})`;
-  checkedSection.style.display = checkedCount > 0 ? 'block' : 'none';
-
-  if (uncheckedCount === 0 && checkedCount > 0) {
-    groceryContainer.innerHTML =
-      '<p style="color: #999; text-align: center; padding: 12px;">All items are checked.</p>';
-  }
-
-  // If user checks "Hide checked", checked items stay only in dropdown anyway.
-  // (This toggle is still useful if later you decide to show checked items in main list too.)
-}
-
-
-        // Toggle grocery item checked state
-        async function toggleGroceryCheck(key) {
-            if (checkedGroceries.has(key)) {
-                checkedGroceries.delete(key);
-            } else {
-                checkedGroceries.add(key);
+            if (groceryMap.size === 0) {
+                groceryContainer.innerHTML =
+                    '<p style="color: #999; text-align: center; padding: 20px;">No grocery items yet</p>';
+                checkedSection.style.display = 'none';
+                return;
             }
+
+            let checkedCount = 0;
+            let uncheckedCount = 0;
+
+            function makeGroceryDiv(grocery, isChecked) {
+                const groceryDiv = document.createElement('div');
+                groceryDiv.className = 'grocery-item' + (isChecked ? ' checked' : '');
+                groceryDiv.style.background = grocery.color;
+
+                groceryDiv.innerHTML = `
+                    <div class="grocery-content">
+                        <input type="checkbox" class="grocery-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroceryCheck('${grocery.key}')">
+                        <div class="grocery-item-name">
+                            <div style="font-size: 13px; font-weight: 600;">${grocery.item}</div>
+                            <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${grocery.mealName}</div>
+                        </div>
+                    </div>
+                    ${grocery.quantity ? `<div class="grocery-item-quantity">${grocery.quantity}</div>` : ''}
+                `;
+                return groceryDiv;
+            }
+
+            groceryMap.forEach(grocery => {
+                const isChecked = checkedGroceries.has(grocery.key);
+                if (!isChecked) {
+                    uncheckedCount++;
+                    groceryContainer.appendChild(makeGroceryDiv(grocery, false));
+                }
+            });
+
+            groceryMap.forEach(grocery => {
+                const isChecked = checkedGroceries.has(grocery.key);
+                if (isChecked) {
+                    checkedCount++;
+                    checkedContainer.appendChild(makeGroceryDiv(grocery, true));
+                }
+            });
+
+            checkedSummary.textContent = `Checked items (${checkedCount})`;
+            checkedSection.style.display = checkedCount > 0 ? 'block' : 'none';
+
+            if (uncheckedCount === 0 && checkedCount > 0) {
+                groceryContainer.innerHTML =
+                    '<p style="color: #999; text-align: center; padding: 12px;">All items are checked.</p>';
+            }
+        }
+
+        // Toggle grocery checked state
+        async function toggleGroceryCheck(key) {
+            if (checkedGroceries.has(key)) checkedGroceries.delete(key);
+            else checkedGroceries.add(key);
+
             await saveCheckedGroceriesToSheets();
+
+            // IMPORTANT: re-render BOTH so meal status lines update
             renderGroceryList();
+            renderCalendar();
         }
 
         // Navigation
@@ -1332,12 +1307,10 @@
         // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('mealModal');
-            if (event.target === modal) {
-                closeModal();
-            }
+            if (event.target === modal) closeModal();
         }
 
-        // Monitor online/offline status
+        // Online/offline
         window.addEventListener('online', () => {
             isOnline = true;
             updateSyncStatus('syncing', 'Back online. Syncing...');
