@@ -239,7 +239,8 @@
     }
 
     /* -----------------------------
-       MEAL PILLS
+       MEAL PILLS (UPDATED)
+       Status line is next to emoji, not through the middle.
        ----------------------------- */
     .meal-item {
       font-size: 10px;
@@ -249,17 +250,18 @@
       cursor: pointer;
       color: white;
       font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       touch-action: manipulation;
 
-      /* IMPORTANT: enables the inset status line */
-      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      overflow: hidden;
     }
 
     @media (max-width: 420px) {
       .meal-item {
+        flex-wrap: wrap;
         white-space: normal;
         overflow: visible;
         text-overflow: unset;
@@ -270,28 +272,40 @@
     }
 
     .meal-item:active { opacity: 0.8; }
-    .meal-lunch::before { content: "🍽️ "; }
-    .meal-dinner::before { content: "🌙 "; }
 
-    /* Inset status line inside the meal pill
-       - green means ready to cook
-       - red means shopping required (unchecked items exist)
-    */
+    .meal-icon {
+      flex-shrink: 0;
+      font-size: 12px;
+      line-height: 1;
+    }
+
     .meal-status-line {
-      position: absolute;
-      left: 10%;
-      right: 10%;
-      top: 50%;
+      width: 16px;
       height: 3px;
       border-radius: 999px;
-      transform: translateY(-50%);
       background: #2ecc71;
       opacity: 0.95;
-      pointer-events: none;
+      flex-shrink: 0;
     }
 
     .meal-status-line.red {
       background: #e74c3c;
+    }
+
+    .meal-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 420px) {
+      .meal-text {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+      }
     }
 
     /* -----------------------------
@@ -617,7 +631,6 @@
 </head>
 
 <body>
-  <!-- Loading overlay shown while syncing -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner">
       <div class="spinner"></div>
@@ -628,13 +641,11 @@
   <div class="container">
     <h1>🍽️ Monthly Meal Planner</h1>
 
-    <!-- Sync status banner -->
     <div class="sync-status" id="syncStatus">
       <span id="syncStatusText">Connecting to Google Sheets...</span>
     </div>
 
     <div class="main-layout">
-      <!-- CALENDAR -->
       <div class="calendar-section">
         <div class="controls">
           <div class="month-nav">
@@ -653,7 +664,6 @@
         </div>
       </div>
 
-      <!-- GROCERY LIST -->
       <div class="grocery-section">
         <div class="grocery-header">
           <h2>📝 Grocery List</h2>
@@ -669,7 +679,6 @@
     </div>
   </div>
 
-  <!-- ADD / EDIT MEAL MODAL -->
   <div id="mealModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -736,30 +745,27 @@
        CONFIG
        ========================================================= */
 
-    // Google Sheets read settings
     const SHEET_ID = '1dXKOjcq99gZ51qrprHgjH5DAS2wt99bYcA0XWySKjRw';
     const API_KEY = 'AIzaSyCe4wU0KYBY04Le9MAC4BaAuU1c-zy9dac';
     const MEALS_RANGE = 'Meals!A:H';
     const CHECKED_RANGE = 'CheckedGroceries!A:A';
 
-    // Apps Script Web App URL (used for writing to Sheets)
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8xy5VlkGcnyvedn6CaZbOKoB9wVTh-dpgL1C0m1tD3_psp44LAzwAF_ASW_Wm0v2/exec';
 
     /* =========================================================
        APP STATE
        ========================================================= */
-    let currentDate = new Date();       // which month is being displayed
-    let meals = [];                     // array of meal objects loaded from Sheets (or localStorage fallback)
-    let editingMealId = null;           // if not null, the modal is editing an existing meal
-    let selectedDate = null;            // date clicked on calendar (used for prefilling modal)
-    let checkedGroceries = new Set();   // set of grocery keys that are checked: `${meal.id}-${grocery.item}`
+    let currentDate = new Date();
+    let meals = [];
+    let editingMealId = null;
+    let selectedDate = null;
+    let checkedGroceries = new Set();
     let isOnline = navigator.onLine;
 
     /* =========================================================
        UTILITIES
        ========================================================= */
 
-    // Pick a color from palette (tries to avoid reusing already-used colors)
     function getNextAvailableColor() {
       const palette = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'];
       const used = new Set(meals.map(m => m.color).filter(Boolean));
@@ -768,7 +774,6 @@
       return pickFrom[Math.floor(Math.random() * pickFrom.length)];
     }
 
-    // Update the sync banner at the top
     function updateSyncStatus(status, message) {
       const statusEl = document.getElementById('syncStatus');
       const textEl = document.getElementById('syncStatusText');
@@ -776,26 +781,20 @@
       textEl.textContent = message;
     }
 
-    // Show/hide the loading overlay
     function showLoading(show) {
       const overlay = document.getElementById('loadingOverlay');
       if (show) overlay.classList.add('show');
       else overlay.classList.remove('show');
     }
 
-    // Check if date is within [startDate, endDate]
     function isDateInRange(date, startDate, endDate) {
       return date >= startDate && date <= endDate;
     }
 
     /* =========================================================
-       READY-TO-COOK LOGIC (GREEN vs RED LINE)
+       READY TO COOK LOGIC
        ========================================================= */
 
-    // Rule:
-    // - If meal has NO groceries => ready (green)
-    // - If meal has groceries and ALL are checked => ready (green)
-    // - Otherwise => not ready (red)
     function isMealReadyToCook(meal) {
       const items = meal?.groceries || [];
       if (items.length === 0) return true;
@@ -803,7 +802,7 @@
     }
 
     /* =========================================================
-       LOCAL STORAGE BACKUP (fallback if Sheets fails)
+       LOCAL STORAGE BACKUP
        ========================================================= */
     function saveMealsToLocalStorage() {
       localStorage.setItem('mealPlanner', JSON.stringify(meals));
@@ -827,7 +826,6 @@
        GOOGLE SHEETS: LOAD
        ========================================================= */
 
-    // Read meals from Sheets (Meals!A:H)
     async function loadMealsFromSheets() {
       try {
         showLoading(true);
@@ -837,7 +835,6 @@
         const response = await fetch(url);
         const data = await response.json();
 
-        // Expecting header row, then data rows
         if (data.values && data.values.length > 1) {
           meals = data.values.slice(1).map(row => ({
             id: parseInt(row[0]) || Date.now(),
@@ -863,7 +860,6 @@
       }
     }
 
-    // Read checked groceries from Sheets (CheckedGroceries!A:A)
     async function loadCheckedGroceriesFromSheets() {
       try {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${CHECKED_RANGE}?key=${API_KEY}`;
@@ -882,17 +878,14 @@
     }
 
     /* =========================================================
-       GOOGLE SHEETS: SAVE (via Apps Script Web App)
+       GOOGLE SHEETS: SAVE
        ========================================================= */
 
-    // Save meals by POSTing to Apps Script web app
     async function saveMealsToSheets() {
       try {
         updateSyncStatus('syncing', 'Saving...');
-
         if (!SCRIPT_URL) throw new Error('Missing SCRIPT_URL');
 
-        // Use form-encoded POST to reduce CORS issues
         const body = new URLSearchParams();
         body.set('action', 'saveMeals');
         body.set('meals', JSON.stringify(meals));
@@ -918,7 +911,6 @@
       }
     }
 
-    // Save checked grocery keys by POSTing to Apps Script web app
     async function saveCheckedGroceriesToSheets() {
       try {
         if (!SCRIPT_URL) {
@@ -953,12 +945,10 @@
        CALENDAR RENDERING
        ========================================================= */
 
-    // Build the month grid UI
     function renderCalendar() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      // Month title
       document.getElementById('currentMonth').textContent =
         new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
@@ -968,20 +958,17 @@
       const calendarGrid = document.getElementById('calendarGrid');
       calendarGrid.innerHTML = '';
 
-      // Blank cells before the 1st of the month
       for (let i = 0; i < firstDay; i++) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'calendar-day other-month';
         calendarGrid.appendChild(emptyDiv);
       }
 
-      // Actual day cells
       for (let day = 1; day <= daysInMonth; day++) {
         const dayDiv = createDayCell(day, false, year, month);
         calendarGrid.appendChild(dayDiv);
       }
 
-      // Fill remaining cells so grid stays aligned
       const totalCells = calendarGrid.children.length;
       const remainingCells = Math.ceil(totalCells / 7) * 7 - totalCells;
       for (let i = 0; i < remainingCells; i++) {
@@ -991,18 +978,15 @@
       }
     }
 
-    // Create one day cell (date number + meal pills)
     function createDayCell(day, isOtherMonth, year, month) {
       const dayDiv = document.createElement('div');
       dayDiv.className = 'calendar-day' + (isOtherMonth ? ' other-month' : '');
 
       if (isOtherMonth) return dayDiv;
 
-      // YYYY-MM-DD used everywhere for date comparisons
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
 
-      // Get meals that overlap this date and sort lunch before dinner
       const dayMeals = meals
         .filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate))
         .sort((a, b) => {
@@ -1010,21 +994,28 @@
           return (order[a.type] ?? 99) - (order[b.type] ?? 99);
         });
 
-      // Render each meal pill
       dayMeals.forEach(meal => {
         const mealDiv = document.createElement('div');
-        mealDiv.className = `meal-item meal-${meal.type}`;
+        mealDiv.className = 'meal-item';
         mealDiv.style.background = meal.color;
-        mealDiv.textContent = meal.name;
 
-        // Insert the status line INSIDE the pill
-        // green = ready, red = needs shopping
         const ready = isMealReadyToCook(meal);
+
+        const icon = document.createElement('span');
+        icon.className = 'meal-icon';
+        icon.textContent = meal.type === 'lunch' ? '🍽️' : '🌙';
+
         const line = document.createElement('div');
         line.className = 'meal-status-line' + (ready ? '' : ' red');
-        mealDiv.appendChild(line);
 
-        // Clicking a meal pill opens edit modal
+        const text = document.createElement('div');
+        text.className = 'meal-text';
+        text.textContent = meal.name;
+
+        mealDiv.appendChild(icon);
+        mealDiv.appendChild(line);
+        mealDiv.appendChild(text);
+
         mealDiv.onclick = (e) => {
           e.stopPropagation();
           editMeal(meal.id);
@@ -1033,7 +1024,6 @@
         dayDiv.appendChild(mealDiv);
       });
 
-      // Clicking the blank part of the day cell opens "Add Meal" modal for that date
       dayDiv.onclick = () => openAddMealModal(dateStr);
 
       return dayDiv;
@@ -1043,19 +1033,16 @@
        MEAL MODAL (ADD / EDIT)
        ========================================================= */
 
-    // Open modal for new meal
     function openAddMealModal(date = null) {
       document.getElementById('mealModal').style.display = 'block';
       document.getElementById('modalTitle').textContent = 'Add Meal';
       document.getElementById('deleteMealBtn').style.display = 'none';
 
-      // Reset fields
       document.getElementById('mealName').value = '';
       document.getElementById('mealType').value = 'lunch';
       document.getElementById('servings').value = '4';
       document.getElementById('mealColor').value = getNextAvailableColor();
 
-      // Default date range
       if (date) {
         document.getElementById('startDate').value = date;
         document.getElementById('endDate').value = date;
@@ -1067,14 +1054,12 @@
         selectedDate = null;
       }
 
-      // Reset grocery inputs (start with one row)
       document.getElementById('groceryInputs').innerHTML = '';
       addGroceryInput();
 
       editingMealId = null;
     }
 
-    // Open modal for existing meal
     function editMeal(mealId) {
       const meal = meals.find(m => m.id === mealId);
       if (!meal) return;
@@ -1083,7 +1068,6 @@
       document.getElementById('modalTitle').textContent = 'Edit Meal';
       document.getElementById('deleteMealBtn').style.display = 'block';
 
-      // Fill fields
       document.getElementById('mealName').value = meal.name;
       document.getElementById('mealType').value = meal.type;
       document.getElementById('startDate').value = meal.startDate;
@@ -1091,7 +1075,6 @@
       document.getElementById('servings').value = meal.servings;
       document.getElementById('mealColor').value = meal.color;
 
-      // Fill groceries
       document.getElementById('groceryInputs').innerHTML = '';
       if (meal.groceries && meal.groceries.length > 0) {
         meal.groceries.forEach(g => addGroceryInput(g.item, g.quantity));
@@ -1102,7 +1085,6 @@
       editingMealId = mealId;
     }
 
-    // Add a grocery input row in the modal
     function addGroceryInput(itemValue = '', quantityValue = '') {
       const container = document.getElementById('groceryInputs');
       const row = document.createElement('div');
@@ -1117,13 +1099,11 @@
       container.appendChild(row);
     }
 
-    // Remove one grocery input row (but keep at least 1)
     function removeGroceryInput(btn) {
       const container = document.getElementById('groceryInputs');
       if (container.children.length > 1) btn.parentElement.remove();
     }
 
-    // Save meal from modal into `meals[]`, then persist to Sheets
     async function saveMeal() {
       const name = document.getElementById('mealName').value.trim();
       const type = document.getElementById('mealType').value;
@@ -1142,7 +1122,6 @@
         return;
       }
 
-      // Read groceries from modal inputs
       const groceryRows = document.querySelectorAll('.grocery-input-row');
       const groceries = [];
       groceryRows.forEach(row => {
@@ -1152,7 +1131,6 @@
         if (item) groceries.push({ item, quantity });
       });
 
-      // Build meal object
       const meal = {
         id: editingMealId || Date.now(),
         name,
@@ -1164,7 +1142,6 @@
         groceries
       };
 
-      // Insert or update in meals array
       if (editingMealId) {
         const index = meals.findIndex(m => m.id === editingMealId);
         meals[index] = meal;
@@ -1175,12 +1152,10 @@
       await saveMealsToSheets();
       closeModal();
 
-      // Re-render calendar + grocery list (and lines)
       renderCalendar();
       renderGroceryList();
     }
 
-    // Delete an existing meal
     async function deleteMeal() {
       if (!confirm('Are you sure you want to delete this meal?')) return;
 
@@ -1191,14 +1166,12 @@
       renderGroceryList();
     }
 
-    // Close modal and reset edit state
     function closeModal() {
       document.getElementById('mealModal').style.display = 'none';
       editingMealId = null;
       selectedDate = null;
     }
 
-    // Click outside modal content closes it
     window.onclick = function(event) {
       const modal = document.getElementById('mealModal');
       if (event.target === modal) closeModal();
@@ -1208,7 +1181,6 @@
        GROCERY LIST RENDERING
        ========================================================= */
 
-    // Create the grocery list for the CURRENT month, then split into unchecked + checked dropdown
     function renderGroceryList() {
       const groceryContainer = document.getElementById('groceryList');
       const checkedContainer = document.getElementById('checkedGroceryList');
@@ -1218,17 +1190,13 @@
       groceryContainer.innerHTML = '';
       checkedContainer.innerHTML = '';
 
-      // Determine current month boundaries (YYYY-MM-01 to YYYY-MM-lastDay)
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
       const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
-      // Map: groceryKey -> grocery display info
-      // key format: `${meal.id}-${grocery.item}`
       const groceryMap = new Map();
 
-      // Aggregate groceries from all meals that overlap current month
       meals.forEach(meal => {
         const mealOverlapsMonth = !(meal.endDate < monthStart || meal.startDate > monthEnd);
 
@@ -1246,7 +1214,6 @@
         }
       });
 
-      // If no groceries for month
       if (groceryMap.size === 0) {
         groceryContainer.innerHTML =
           '<p style="color: #999; text-align: center; padding: 20px;">No grocery items yet</p>';
@@ -1257,7 +1224,6 @@
       let checkedCount = 0;
       let uncheckedCount = 0;
 
-      // Helper to build a grocery row div
       function makeGroceryDiv(grocery, isChecked) {
         const groceryDiv = document.createElement('div');
         groceryDiv.className = 'grocery-item' + (isChecked ? ' checked' : '');
@@ -1280,7 +1246,6 @@
         return groceryDiv;
       }
 
-      // First render unchecked groceries into main list
       groceryMap.forEach(grocery => {
         const isChecked = checkedGroceries.has(grocery.key);
         if (!isChecked) {
@@ -1289,7 +1254,6 @@
         }
       });
 
-      // Then render checked groceries into dropdown list
       groceryMap.forEach(grocery => {
         const isChecked = checkedGroceries.has(grocery.key);
         if (isChecked) {
@@ -1298,25 +1262,21 @@
         }
       });
 
-      // Update checked summary label + show/hide section
       checkedSummary.textContent = `Checked items (${checkedCount})`;
       checkedSection.style.display = checkedCount > 0 ? 'block' : 'none';
 
-      // If everything is checked, show a friendly message in the main list
       if (uncheckedCount === 0 && checkedCount > 0) {
         groceryContainer.innerHTML =
           '<p style="color: #999; text-align: center; padding: 12px;">All items are checked.</p>';
       }
     }
 
-    // Toggle a grocery key in the checkedGroceries set, persist it, then re-render UI
     async function toggleGroceryCheck(key) {
       if (checkedGroceries.has(key)) checkedGroceries.delete(key);
       else checkedGroceries.add(key);
 
       await saveCheckedGroceriesToSheets();
 
-      // Re-render grocery list AND calendar so meal lines update immediately
       renderGroceryList();
       renderCalendar();
     }
