@@ -830,6 +830,45 @@
     /* =========================================================
        APPS SCRIPT: LOAD (READ)
        ========================================================= */
+function normalizeDateToYMD(value) {
+  if (!value) return '';
+
+  // If Apps Script returns a Date object (rare in fetch JSON) or you ever pass one locally
+  if (value instanceof Date) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  const s = String(value).trim();
+
+  // ISO string like 2026-02-15T05:00:00.000Z
+  if (s.includes('T') && s.length >= 10) return s.slice(0, 10);
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // Common Sheets display like M/D/YYYY or MM/DD/YYYY
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) {
+    const mm = String(mdy[1]).padStart(2, '0');
+    const dd = String(mdy[2]).padStart(2, '0');
+    const yy = mdy[3];
+    return `${yy}-${mm}-${dd}`;
+  }
+
+  // Fallback: try Date parse
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return '';
+}
 
     async function loadMealsFromScript() {
       try {
@@ -849,8 +888,8 @@
             id: parseInt(row[0]) || Date.now(),
             name: row[1] || '',
             type: row[2] || 'lunch',
-            startDate: row[3] || '',
-            endDate: row[4] || '',
+            startDate: normalizeDateToYMD(row[3]),
+            endDate: normalizeDateToYMD(row[4]),
             servings: parseInt(row[5]) || 4,
             color: row[6] || '#FF6B6B',
             groceries: row[7] ? safeJsonParse(row[7], []) : []
