@@ -746,10 +746,6 @@
        ========================================================= */
 
     const SHEET_ID = '1dXKOjcq99gZ51qrprHgjH5DAS2wt99bYcA0XWySKjRw';
-    const API_KEY = 'AIzaSyCe4wU0KYBY04Le9MAC4BaAuU1c-zy9dac';
-    const MEALS_RANGE = 'Meals!A:H';
-    const CHECKED_RANGE = 'CheckedGroceries!A:A';
-
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8xy5VlkGcnyvedn6CaZbOKoB9wVTh-dpgL1C0m1tD3_psp44LAzwAF_ASW_Wm0v2/exec';
 
     /* =========================================================
@@ -826,56 +822,70 @@
        GOOGLE SHEETS: LOAD
        ========================================================= */
 
-    async function loadMealsFromSheets() {
-      try {
-        showLoading(true);
-        updateSyncStatus('syncing', 'Loading meals from Google Sheets...');
+   async function loadMealsFromSheets() {
+  try {
+    showLoading(true);
+    updateSyncStatus('syncing', 'Loading meals...');
 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${MEALS_RANGE}?key=${API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
+    const body = new URLSearchParams();
+    body.set('action', 'getMeals');
 
-        if (data.values && data.values.length > 1) {
-          meals = data.values.slice(1).map(row => ({
-            id: parseInt(row[0]) || Date.now(),
-            name: row[1] || '',
-            type: row[2] || 'lunch',
-            startDate: row[3] || '',
-            endDate: row[4] || '',
-            servings: parseInt(row[5]) || 4,
-            color: row[6] || '#FF6B6B',
-            groceries: row[7] ? JSON.parse(row[7]) : []
-          }));
-        } else {
-          meals = [];
-        }
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    });
 
-        updateSyncStatus('synced', '✓ Synced with Google Sheets');
-        showLoading(false);
-      } catch (error) {
-        console.error('Error loading from Sheets:', error);
-        updateSyncStatus('error', '✗ Error loading data. Using local backup.');
-        loadMealsFromLocalStorage();
-        showLoading(false);
-      }
+    const json = await res.json();
+    if (!res.ok || json.ok === false) throw new Error(json.error || 'Load meals failed');
+
+    const values = json.values || [];
+
+    if (values.length > 1) {
+      meals = values.slice(1).map(row => ({
+        id: parseInt(row[0]) || Date.now(),
+        name: row[1] || '',
+        type: row[2] || 'lunch',
+        startDate: row[3] || '',
+        endDate: row[4] || '',
+        servings: parseInt(row[5]) || 4,
+        color: row[6] || '#FF6B6B',
+        groceries: row[7] ? JSON.parse(row[7]) : []
+      }));
+    } else {
+      meals = [];
     }
+
+    updateSyncStatus('synced', '✓ Synced with Google Sheets');
+    showLoading(false);
+  } catch (error) {
+    console.error('Error loading meals:', error);
+    updateSyncStatus('error', '✗ Error loading data. Using local backup.');
+    loadMealsFromLocalStorage();
+    showLoading(false);
+  }
+}
 
     async function loadCheckedGroceriesFromSheets() {
-      try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${CHECKED_RANGE}?key=${API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
+  try {
+    const body = new URLSearchParams();
+    body.set('action', 'getCheckedGroceries');
 
-        if (data.values && data.values.length > 0) {
-          checkedGroceries = new Set(data.values.flat());
-        } else {
-          checkedGroceries = new Set();
-        }
-      } catch (error) {
-        console.error('Error loading checked groceries:', error);
-        loadCheckedGroceriesFromLocalStorage();
-      }
-    }
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    });
+
+    const json = await res.json();
+    if (!res.ok || json.ok === false) throw new Error(json.error || 'Load checked failed');
+
+    checkedGroceries = new Set(json.checked || []);
+  } catch (error) {
+    console.error('Error loading checked groceries:', error);
+    loadCheckedGroceriesFromLocalStorage();
+  }
+}
 
     /* =========================================================
        GOOGLE SHEETS: SAVE
