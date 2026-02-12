@@ -239,7 +239,7 @@
     }
 
     /* -----------------------------
-       MEAL PILLS (UPDATED)
+       MEAL PILLS
        Status line is next to emoji, not through the middle.
        ----------------------------- */
     .meal-item {
@@ -283,13 +283,13 @@
       width: 16px;
       height: 3px;
       border-radius: 999px;
-      background: #2ecc71;
+      background: #2ecc71; /* ready */
       opacity: 0.95;
       flex-shrink: 0;
     }
 
     .meal-status-line.red {
-      background: #e74c3c;
+      background: #e74c3c; /* needs shopping */
     }
 
     .meal-text {
@@ -642,7 +642,7 @@
     <h1>🍽️ Monthly Meal Planner</h1>
 
     <div class="sync-status" id="syncStatus">
-      <span id="syncStatusText">Connecting to Google Sheets...</span>
+      <span id="syncStatusText">Connecting...</span>
     </div>
 
     <div class="main-layout">
@@ -745,12 +745,11 @@
        CONFIG
        ========================================================= */
 
-    const SHEET_ID = '1dXKOjcq99gZ51qrprHgjH5DAS2wt99bYcA0XWySKjRw';
-    const API_KEY = 'AIzaSyCe4wU0KYBY04Le9MAC4BaAuU1c-zy9dac';
-    const MEALS_RANGE = 'Meals!A:H';
-    const CHECKED_RANGE = 'CheckedGroceries!A:A';
-
+    // Your Apps Script Web App URL (Deploy > Web app)
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8xy5VlkGcnyvedn6CaZbOKoB9wVTh-dpgL1C0m1tD3_psp44LAzwAF_ASW_Wm0v2/exec';
+
+    // Must match APP_SECRET in Code.gs
+    const APP_SECRET = 'my-meal-planner-app-secure-2026';
 
     /* =========================================================
        APP STATE
@@ -787,8 +786,13 @@
       else overlay.classList.remove('show');
     }
 
+    // String compare works because we use YYYY-MM-DD everywhere
     function isDateInRange(date, startDate, endDate) {
       return date >= startDate && date <= endDate;
+    }
+
+    function safeJsonParse(str, fallback) {
+      try { return JSON.parse(str); } catch (_) { return fallback; }
     }
 
     /* =========================================================
@@ -804,13 +808,14 @@
     /* =========================================================
        LOCAL STORAGE BACKUP
        ========================================================= */
+
     function saveMealsToLocalStorage() {
       localStorage.setItem('mealPlanner', JSON.stringify(meals));
     }
 
     function loadMealsFromLocalStorage() {
       const stored = localStorage.getItem('mealPlanner');
-      if (stored) meals = JSON.parse(stored);
+      if (stored) meals = safeJsonParse(stored, []);
     }
 
     function saveCheckedGroceriesToLocalStorage() {
@@ -819,24 +824,28 @@
 
     function loadCheckedGroceriesFromLocalStorage() {
       const stored = localStorage.getItem('checkedGroceries');
-      if (stored) checkedGroceries = new Set(JSON.parse(stored));
+      if (stored) checkedGroceries = new Set(safeJsonParse(stored, []));
     }
 
     /* =========================================================
-       GOOGLE SHEETS: LOAD
+       APPS SCRIPT: LOAD (READ)
        ========================================================= */
 
-    async function loadMealsFromSheets() {
+    async function loadMealsFromScript() {
       try {
         showLoading(true);
-        updateSyncStatus('syncing', 'Loading meals from Google Sheets...');
+        updateSyncStatus('syncing', 'Loading meals...');
 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${MEALS_RANGE}?key=${API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
+        // Apps Script returns: { ok:true, values:[[headers...],[row...],...] }
+        const url = `${SCRIPT_URL}?action=getMeals&secret=${encodeURIComponent(APP_SECRET)}`;
+        const res = await fetch(url, { method: 'GET' });
+        const out = await res.json();
 
-        if (data.values && data.values.length > 1) {
-          meals = data.values.slice(1).map(row => ({
+        if (!res.ok || out.ok === false) throw new Error(out.error || 'Failed to load meals');
+
+        const values = Array.isArray(out.values) ? out.values : [];
+        if (values.length > 1) {
+          meals = values.slice(1).map(row => ({
             id: parseInt(row[0]) || Date.now(),
             name: row[1] || '',
             type: row[2] || 'lunch',
@@ -844,50 +853,52 @@
             endDate: row[4] || '',
             servings: parseInt(row[5]) || 4,
             color: row[6] || '#FF6B6B',
-            groceries: row[7] ? JSON.parse(row[7]) : []
+            groceries: row[7] ? safeJsonParse(row[7], []) : []
           }));
         } else {
           meals = [];
         }
 
-        updateSyncStatus('synced', '✓ Synced with Google Sheets');
+        saveMealsToLocalStorage();
+        updateSyncStatus('synced', '✓ Loaded');
         showLoading(false);
-      } catch (error) {
-        console.error('Error loading from Sheets:', error);
-        updateSyncStatus('error', '✗ Error loading data. Using local backup.');
+      } catch (err) {
+        console.error('loadMealsFromScript error:', err);
+        updateSyncStatus('error', '✗ Load failed. Using local backup.');
         loadMealsFromLocalStorage();
         showLoading(false);
       }
     }
 
-    async function loadCheckedGroceriesFromSheets() {
+    async function loadCheckedGroceriesFromScript() {
       try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${CHECKED_RANGE}?key=${API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
+        const url = `${SCRIPT_URL}?action=getCheckedGroceries&secret=${encodeURIComponent(APP_SECRET)}`;
+        const res = await fetch(url, { method: 'GET' });
+        const out = await res.json();
 
-        if (data.values && data.values.length > 0) {
-          checkedGroceries = new Set(data.values.flat());
-        } else {
-          checkedGroceries = new Set();
-        }
-      } catch (error) {
-        console.error('Error loading checked groceries:', error);
+        if (!res.ok || out.ok === false) throw new Error(out.error || 'Failed to load checked items');
+
+        const checked = Array.isArray(out.checked) ? out.checked : [];
+        checkedGroceries = new Set(checked);
+
+        saveCheckedGroceriesToLocalStorage();
+      } catch (err) {
+        console.error('loadCheckedGroceriesFromScript error:', err);
         loadCheckedGroceriesFromLocalStorage();
       }
     }
 
     /* =========================================================
-       GOOGLE SHEETS: SAVE
+       APPS SCRIPT: SAVE (WRITE)
        ========================================================= */
 
-    async function saveMealsToSheets() {
+    async function saveMealsToScript() {
       try {
-        updateSyncStatus('syncing', 'Saving...');
-        if (!SCRIPT_URL) throw new Error('Missing SCRIPT_URL');
+        updateSyncStatus('syncing', 'Saving meals...');
 
         const body = new URLSearchParams();
         body.set('action', 'saveMeals');
+        body.set('secret', APP_SECRET);
         body.set('meals', JSON.stringify(meals));
 
         const res = await fetch(SCRIPT_URL, {
@@ -896,30 +907,23 @@
           body: body.toString()
         });
 
-        const text = await res.text();
-        let out = {};
-        try { out = JSON.parse(text); } catch (_) {}
-
-        if (!res.ok || out.ok === false) throw new Error(out.error || text || 'Apps Script save failed');
+        const out = safeJsonParse(await res.text(), {});
+        if (!res.ok || out.ok === false) throw new Error(out.error || 'Save meals failed');
 
         saveMealsToLocalStorage();
-        updateSyncStatus('synced', '✓ Saved to Google Sheets');
-      } catch (error) {
-        console.error('Error saving to Sheets:', error);
-        updateSyncStatus('error', '✗ Not saved to Google Sheets. Saved locally.');
+        updateSyncStatus('synced', '✓ Saved');
+      } catch (err) {
+        console.error('saveMealsToScript error:', err);
+        updateSyncStatus('error', '✗ Not saved to Sheets. Saved locally.');
         saveMealsToLocalStorage();
       }
     }
 
-    async function saveCheckedGroceriesToSheets() {
+    async function saveCheckedGroceriesToScript() {
       try {
-        if (!SCRIPT_URL) {
-          saveCheckedGroceriesToLocalStorage();
-          return;
-        }
-
         const body = new URLSearchParams();
         body.set('action', 'saveCheckedGroceries');
+        body.set('secret', APP_SECRET);
         body.set('checked', JSON.stringify(Array.from(checkedGroceries)));
 
         const res = await fetch(SCRIPT_URL, {
@@ -928,15 +932,12 @@
           body: body.toString()
         });
 
-        const text = await res.text();
-        let out = {};
-        try { out = JSON.parse(text); } catch (_) {}
-
-        if (!res.ok || out.ok === false) throw new Error(out.error || text || 'Apps Script save failed');
+        const out = safeJsonParse(await res.text(), {});
+        if (!res.ok || out.ok === false) throw new Error(out.error || 'Save checked failed');
 
         saveCheckedGroceriesToLocalStorage();
-      } catch (error) {
-        console.error('Error saving checked groceries:', error);
+      } catch (err) {
+        console.error('saveCheckedGroceriesToScript error:', err);
         saveCheckedGroceriesToLocalStorage();
       }
     }
@@ -987,6 +988,7 @@
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
 
+      // lunch before dinner
       const dayMeals = meals
         .filter(meal => isDateInRange(dateStr, meal.startDate, meal.endDate))
         .sort((a, b) => {
@@ -1025,7 +1027,6 @@
       });
 
       dayDiv.onclick = () => openAddMealModal(dateStr);
-
       return dayDiv;
     }
 
@@ -1091,8 +1092,8 @@
       row.className = 'grocery-input-row';
 
       row.innerHTML = `
-        <input type="text" placeholder="Grocery item" value="${itemValue}">
-        <input type="text" placeholder="Quantity" value="${quantityValue}">
+        <input type="text" placeholder="Grocery item" value="${escapeHtml(itemValue)}">
+        <input type="text" placeholder="Quantity" value="${escapeHtml(quantityValue)}">
         <button class="remove-grocery-btn" onclick="removeGroceryInput(this)">✕</button>
       `;
 
@@ -1149,9 +1150,8 @@
         meals.push(meal);
       }
 
-      await saveMealsToSheets();
+      await saveMealsToScript();
       closeModal();
-
       renderCalendar();
       renderGroceryList();
     }
@@ -1160,7 +1160,7 @@
       if (!confirm('Are you sure you want to delete this meal?')) return;
 
       meals = meals.filter(m => m.id !== editingMealId);
-      await saveMealsToSheets();
+      await saveMealsToScript();
       closeModal();
       renderCalendar();
       renderGroceryList();
@@ -1234,13 +1234,13 @@
             <input type="checkbox"
                    class="grocery-checkbox"
                    ${isChecked ? 'checked' : ''}
-                   onchange="toggleGroceryCheck('${grocery.key}')">
+                   onchange="toggleGroceryCheck('${escapeJs(grocery.key)}')">
             <div class="grocery-item-name">
-              <div style="font-size: 13px; font-weight: 600;">${grocery.item}</div>
-              <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${grocery.mealName}</div>
+              <div style="font-size: 13px; font-weight: 600;">${escapeHtml(grocery.item)}</div>
+              <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">${escapeHtml(grocery.mealName)}</div>
             </div>
           </div>
-          ${grocery.quantity ? `<div class="grocery-item-quantity">${grocery.quantity}</div>` : ''}
+          ${grocery.quantity ? `<div class="grocery-item-quantity">${escapeHtml(grocery.quantity)}</div>` : ''}
         `;
 
         return groceryDiv;
@@ -1272,11 +1272,11 @@
     }
 
     async function toggleGroceryCheck(key) {
+      // key comes from inline onchange so decode it back
       if (checkedGroceries.has(key)) checkedGroceries.delete(key);
       else checkedGroceries.add(key);
 
-      await saveCheckedGroceriesToSheets();
-
+      await saveCheckedGroceriesToScript();
       renderGroceryList();
       renderCalendar();
     }
@@ -1298,17 +1298,17 @@
     }
 
     /* =========================================================
-       ONLINE / OFFLINE HANDLING
+       ONLINE / OFFLINE
        ========================================================= */
 
     window.addEventListener('online', async () => {
       isOnline = true;
       updateSyncStatus('syncing', 'Back online. Syncing...');
-      await loadMealsFromSheets();
-      await loadCheckedGroceriesFromSheets();
+      await loadMealsFromScript();
+      await loadCheckedGroceriesFromScript();
       renderCalendar();
       renderGroceryList();
-      updateSyncStatus('synced', '✓ Synced with Google Sheets');
+      updateSyncStatus('synced', '✓ Synced');
     });
 
     window.addEventListener('offline', () => {
@@ -1317,12 +1317,30 @@
     });
 
     /* =========================================================
+       BASIC ESCAPERS (prevents broken HTML when users type quotes)
+       ========================================================= */
+
+    function escapeHtml(s) {
+      return String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function escapeJs(s) {
+      // Safe for putting inside single quotes in inline handlers
+      return String(s || '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+    }
+
+    /* =========================================================
        INIT
        ========================================================= */
 
     async function init() {
-      await loadMealsFromSheets();
-      await loadCheckedGroceriesFromSheets();
+      await loadMealsFromScript();
+      await loadCheckedGroceriesFromScript();
       renderCalendar();
       renderGroceryList();
     }
